@@ -24,14 +24,14 @@ This document provides a comprehensive, step-by-step implementation plan with de
 - [ ] Create domain-specific template system
 - [ ] Implement background research functionality
 - [ ] Add one-click setup with smart defaults
-- [ ] Integrate with calendar APIs for automatic context import
+- [ ] Integrate with calendar APIs for automatic context import (Later date)
 
 ### Task 4: Real-Time UI Enhancements
 - [ ] Design adaptive sidebar interface
 - [ ] Implement whisper mode (non-intrusive overlay)
-- [ ] Add keyboard shortcuts for quick interactions
-- [ ] Create customizable display options (font size, contrast)
-- [ ] Implement accessibility features (screen reader support)
+- [ ] Add keyboard shortcuts for quick interactions (Later date)
+- [ ] Create customizable display options (font size, contrast) (Later date)
+- [ ] Implement accessibility features (screen reader support) (Later date)
 
 ### Task 5: Basic Post-Meeting Export
 - [ ] Implement structured summary generation
