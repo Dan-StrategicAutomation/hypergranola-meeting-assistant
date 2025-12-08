@@ -589,8 +589,296 @@ body {
   overflow: hidden;
 }
 
+/* Meeting Context Form Styling */
+.meeting-context-form-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.meeting-context-form {
+  background-color: #252525;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 1.5rem;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #444;
+}
+
+.form-header h2 {
+  color: #88c0d0;
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #88c0d0;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.close-btn:hover {
+  background-color: #333;
+  color: #ffffff;
+}
+
+.form-section {
+  margin-bottom: 1.5rem;
+}
+
+.form-section h3 {
+  color: #88c0d0;
+  font-size: 1.1rem;
+  margin: 0.5rem 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  color: #d8d8d8;
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  color: #f6f6f6;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #88c0d0;
+  background-color: #1f1f1f;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-group select {
+  cursor: pointer;
+}
+
+.form-group select option {
+  background-color: #1a1a1a;
+  color: #f6f6f6;
+}
+
+.participant-input-group,
+.goal-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.participant-input,
+.goal-input {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.participant-input input,
+.goal-input input,
+.participant-input select,
+.goal-input select {
+  flex: 1;
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  color: #f6f6f6;
+  padding: 0.75rem;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.participant-input input:focus,
+.goal-input input:focus,
+.participant-input select:focus,
+.goal-input select:focus {
+  outline: none;
+  border-color: #88c0d0;
+}
+
+.add-btn {
+  background-color: #5e81ac;
+  color: #f6f6f6;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.add-btn:hover {
+  background-color: #81a1c1;
+}
+
+.add-btn:active {
+  background-color: #4f6fa0;
+}
+
+.participant-list,
+.goal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.participant-item,
+.goal-item {
+  background-color: #1a1a1a;
+  border: 1px solid #444;
+  padding: 0.75rem;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #d8d8d8;
+  font-size: 0.95rem;
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: #e67c73;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.remove-btn:hover {
+  background-color: #333;
+  color: #ff9a9a;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #444;
+  justify-content: flex-end;
+}
+
+.cancel-btn,
+.save-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.cancel-btn {
+  background-color: #444;
+  color: #f6f6f6;
+}
+
+.cancel-btn:hover {
+  background-color: #555;
+}
+
+.save-btn {
+  background-color: #5e81ac;
+  color: #f6f6f6;
+}
+
+.save-btn:hover {
+  background-color: #81a1c1;
+}
+
+.save-btn:active {
+  background-color: #4f6fa0;
+}
+
 /* Mobile adjustments */
 @media (max-width: 600px) {
+  .meeting-context-form {
+    max-width: calc(100% - 1rem);
+    padding: 1rem;
+  }
+
+  .form-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .form-section h3 {
+    font-size: 1rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .cancel-btn,
+  .save-btn {
+    width: 100%;
+  }
+
   .status-bar {
     flex-wrap: wrap;
     padding: 0.5rem;

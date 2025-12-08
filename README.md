@@ -1,12 +1,12 @@
-# HyperGranola - AI Engineer Interview Assistant
+# HyperGranola - AI Meeting Assistant
 
-**HyperGranola** is a real-time AI Interview Coach app built with **Tauri**, **Rust**, and **React**. It listens to your voice, searches for live context on the web, and provides instant coaching tips using an LLM.
+**HyperGranola** is a real-time AI Meeting Assistant app built with **Tauri**, **Rust**, and **React**. It listens to your voice, searches for live context on the web, and provides instant meeting facilitation and assistance using an LLM.
 
 ## 🚀 Features
 
 - **🎙️ Real-time STT**: Uses the browser's native Web Speech API (Free, privacy-focused, no external keys).
 - **mag_right Live Search**: Scrapes DuckDuckGo for real-time context on technical topics (No API key required).
-- **🧠 AI Coach**: Connects to any OpenAI-compatible LLM.
+- **🧠 AI Meeting Assistant**: Connects to any OpenAI-compatible LLM.
     - **Local**: Works with [Ollama](https://ollama.com/) (e.g., Llama 3).
     - **Cloud**: Works with [OpenRouter](https://openrouter.ai/) or OpenAI.
 
@@ -55,7 +55,7 @@ Start the development server (Backend + Frontend):
 npm run tauri dev
 ```
 
-The application window should appear. Speak into your microphone to start the loop!
+The application window should appear. Set up your meeting context and speak or type to get meeting assistance!
 
 ## 🔧 Architecture
 

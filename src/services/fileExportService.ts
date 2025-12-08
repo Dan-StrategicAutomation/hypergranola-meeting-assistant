@@ -149,9 +149,13 @@ export class FileExportService {
 
     // Add speaker information
     text += `Speakers:\n`;
-    session.speakers.forEach(speaker => {
-      text += `- ${speaker.name}: ${speaker.messageCount} messages, first detected at ${speaker.firstDetected.toLocaleTimeString()}\n`;
-    });
+      session.speakers.forEach(speaker => {
+        let detectedTime = speaker.firstDetected;
+        if (!(detectedTime instanceof Date)) {
+          detectedTime = new Date(detectedTime);
+        }
+        text += `- ${speaker.name}: ${speaker.messageCount} messages, first detected at ${detectedTime.toLocaleTimeString()}\n`;
+      });
     text += `\n`;
 
     // Add conversation transcript
@@ -195,12 +199,16 @@ export class FileExportService {
 
     // Speakers section
     md += '## 🎤 Speakers\n\n';
-    session.speakers.forEach(speaker => {
-      md += `- **${speaker.name}**: ${speaker.messageCount} messages, first detected at ${speaker.firstDetected.toLocaleTimeString()}\n`;
-      if (speaker.displayName) {
-        md += `  (${speaker.displayName})\n`;
-      }
-    });
+      session.speakers.forEach(speaker => {
+        let detectedTime = speaker.firstDetected;
+        if (!(detectedTime instanceof Date)) {
+          detectedTime = new Date(detectedTime);
+        }
+        md += `- **${speaker.name}**: ${speaker.messageCount} messages, first detected at ${detectedTime.toLocaleTimeString()}\n`;
+        if (speaker.displayName) {
+          md += `  (${speaker.displayName})\n`;
+        }
+      });
     md += '\n';
 
     // Conversation transcript

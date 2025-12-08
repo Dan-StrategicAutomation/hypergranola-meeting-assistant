@@ -7,6 +7,7 @@ use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextPar
 /// Whisper model sizes
 #[derive(Debug, Clone, Copy)]
 pub enum ModelSize {
+    #[allow(dead_code)]
     Tiny,   // ~75MB, fastest, lowest quality
     Base,   // ~142MB, good balance
     Small,  // ~466MB, better quality

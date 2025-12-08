@@ -36,9 +36,11 @@ pub struct DiarizationEngine {
 /// Speaker diarization configuration
 #[derive(Debug, Clone)]
 pub struct DiarizationConfig {
+    #[allow(dead_code)]
     pub min_speaker_duration: Duration,
     pub max_speakers: usize,
     pub voice_activity_threshold: f32,
+    #[allow(dead_code)]
     pub silence_threshold: f32,
 }
 

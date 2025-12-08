@@ -172,6 +172,23 @@ export class EnhancedConversationStorageManager {
                     }
                   }
                 });
+
+                // Convert compressed history timestamps
+                session.compressedHistory?.forEach((compressed: any) => {
+                  if (compressed.timeRange) {
+                    if (typeof compressed.timeRange.start === 'string') {
+                      compressed.timeRange.start = new Date(compressed.timeRange.start);
+                    } else if (!(compressed.timeRange.start instanceof Date)) {
+                      compressed.timeRange.start = new Date();
+                    }
+
+                    if (typeof compressed.timeRange.end === 'string') {
+                      compressed.timeRange.end = new Date(compressed.timeRange.end);
+                    } else if (!(compressed.timeRange.end instanceof Date)) {
+                      compressed.timeRange.end = new Date();
+                    }
+                  }
+                });
               } catch (migrationError) {
                 console.error('Failed to migrate session data:', migrationError);
                 // If migration fails, create a clean session
@@ -592,7 +609,12 @@ export class EnhancedConversationStorageManager {
       ? session.compressedHistory[session.compressedHistory.length - 1].timeRange.end
       : session.startTime;
 
-    const timeSinceLastCompression = new Date().getTime() - lastCompression.getTime();
+    // Defensive check: ensure lastCompression is a Date object
+    const lastCompressionDate = lastCompression instanceof Date 
+      ? lastCompression 
+      : new Date(lastCompression as any);
+
+    const timeSinceLastCompression = new Date().getTime() - lastCompressionDate.getTime();
     const compressionInterval = this.config.compression.timeGroupingMinutes * 60 * 1000;
 
     if (timeSinceLastCompression >= compressionInterval) {
@@ -806,9 +828,27 @@ export class EnhancedConversationStorageManager {
       stats.activeTimeMinutes = durationMinutes;
     });
 
-    // Format summary content
+    // Format summary content with professional structure
     const timePeriod = `${formatTimeForDisplay(timeRange.start)} - ${formatTimeForDisplay(timeRange.end)}`;
-    const summaryContent = `Summary ${timePeriod}:\n\n${keyPoints.join('\n')}\n\nSpeaker Activity:\n${Array.from(speakerStatsMap.values()).map(s => `• Speaker ${s.speakerId.split('_')[1]}: ${s.messageCount} messages, ${s.questionsAsked} questions`).join('\n')}`;
+    
+    // Build structured summary
+    const summaryParts = [
+      `## Meeting Summary (${timePeriod})`,
+      '',
+      `### Key Discussion Points`,
+      ...keyPoints.map(p => p.startsWith('Q') ? `- **Q:** ${p.replace(/^Q\s*\([^)]*\):\s*/, '')}` : `- ${p.replace(/^•\s*\([^)]*\)\s*/, '')}`),
+      '',
+      `### Participant Activity`,
+      ...Array.from(speakerStatsMap.values()).map(s => {
+        const speakerNum = s.speakerId.split('_')[1] || 'Unknown';
+        return `- **Person ${speakerNum}:** ${s.messageCount} messages, ${s.questionsAsked} questions asked`;
+      }),
+      '',
+      `### Duration`,
+      `- ${durationMinutes.toFixed(1)} minutes`
+    ];
+
+    const summaryContent = summaryParts.join('\n');
 
     return {
       timestamp: new Date(),

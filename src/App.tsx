@@ -18,6 +18,7 @@ import {
   EnhancedConversationMessage,
   SessionSummary
 } from "./models/conversation";
+import MeetingContextForm from "./components/MeetingContextForm";
 
 type Status = "ok" | "warning" | "error";
 
@@ -27,16 +28,9 @@ interface SystemStatus {
   environment: "tauri" | "browser";
 }
 
-interface SttStatus {
-  model_loaded: boolean;
-  is_listening: boolean;
-  model_available: boolean;
-}
 
 function App() {
-  const [transcript, setTranscript] = useState("");
   const [correctedTranscript, setCorrectedTranscript] = useState<{timestamp: Date, speaker: string, text: string}[]>([]);
-  const [searchResults, setSearchResults] = useState<string[]>([]);
   const [coachResponse, setCoachResponse] = useState("");
   const [inputText, setInputText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,6 +44,17 @@ function App() {
     ai: { status: "warning", message: "Initializing..." },
     environment: isTauri() ? "tauri" : "browser",
   });
+  const [showMeetingContextForm, setShowMeetingContextForm] = useState(false);
+  
+  // Meeting context state for versatile meeting assistant
+  const [meetingContext, setMeetingContext] = useState<{
+    title?: string;
+    description?: string;
+    domain?: string;
+    participants?: Array<{ name: string; role: string }>;
+    goals?: Array<{ description: string; priority: number }>;
+    background?: string;
+  } | null>(null);
 
   // Enhanced conversation tracking state
   const [conversationHistory, setConversationHistory] = useState<EnhancedConversationMessage[]>([]);
@@ -61,6 +66,8 @@ function App() {
   const [editingSpeaker, setEditingSpeaker] = useState<string | null>(null);
   const [speakerNameInput, setSpeakerNameInput] = useState('');
   const [lastRevisionTime, setLastRevisionTime] = useState<Date>(new Date());
+  const [transcript, setTranscript] = useState("");
+  const [searchResults, setSearchResults] = useState<string[]>([]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
@@ -154,7 +161,7 @@ function App() {
         }
         const searchRes = await browserSearch(text);
         setSearchResults((prev) => [...prev, searchRes]);
-        const coachRes = await browserAskCoach(text, searchRes);
+        const coachRes = await browserAskCoach(text, searchRes, meetingContext || undefined);
         setCoachResponse(coachRes);
 
         // Add AI response to conversation tracking
@@ -180,6 +187,32 @@ function App() {
       const newSession = conversationStorage.startNewSession('Initial Conversation');
       setCurrentSession(newSession);
     }
+
+    // Load meeting context from storage
+    const loadMeetingContext = async () => {
+      if (isTauri()) {
+        try {
+          const context = await invoke<any>("get_current_meeting_context");
+          if (context) {
+            setMeetingContext(context);
+          }
+        } catch (error) {
+          console.warn("Failed to load meeting context from Tauri:", error);
+        }
+      } else {
+        // Load from browser localStorage if available
+        try {
+          const savedContext = localStorage.getItem('meetingContext');
+          if (savedContext) {
+            setMeetingContext(JSON.parse(savedContext));
+          }
+        } catch (error) {
+          console.warn("Failed to load meeting context from localStorage:", error);
+        }
+      }
+    };
+
+    loadMeetingContext();
 
     // Set up listener for session updates
     const updateInterval = setInterval(() => {
@@ -227,7 +260,7 @@ function App() {
         setSearchResults((prev) => [...prev, event.payload]);
       }).then((fn) => { unlistenSearch = fn; });
 
-      listen<string>("coach_response", (event) => {
+      listen<string>("meeting_assistant_response", (event) => {
         setCoachResponse(event.payload);
         setIsProcessing(false);
       }).then((fn) => { unlistenCoach = fn; });
@@ -434,7 +467,7 @@ function App() {
       ...prev,
       ai: { status: "ok", message: "Browser mode (API key set)" },
     }));
-    setCoachResponse("✅ API key saved. Ready to coach!");
+    setCoachResponse("✅ API key saved. Ready to assist with meetings!");
   }
 
   const statusIcon = (status: Status) => {
@@ -576,6 +609,14 @@ function App() {
           🆕 New
         </button>
 
+        <button
+          className="meeting-context-btn"
+          onClick={() => setShowMeetingContextForm(true)}
+          title="Set up meeting context"
+        >
+          📋 Meeting Setup
+        </button>
+
         {/* Current speaker indicator */}
         <span className="status-item speaker-indicator" title={`Current speaker: ${currentSpeaker}`}>
           🎤 {currentSpeaker}
@@ -624,6 +665,26 @@ function App() {
             Close
           </button>
         </div>
+      )}
+
+      {/* Meeting Context Form */}
+      {showMeetingContextForm && (
+        <MeetingContextForm
+          onClose={() => setShowMeetingContextForm(false)}
+          onSave={(context) => {
+            setShowMeetingContextForm(false);
+            setMeetingContext(context as any);
+            // Save to browser localStorage in browser mode
+            if (!isTauri()) {
+              try {
+                localStorage.setItem('meetingContext', JSON.stringify(context));
+              } catch (error) {
+                console.warn("Failed to save meeting context to localStorage:", error);
+              }
+            }
+            setCoachResponse(`✅ Meeting context saved: ${context.title}`);
+          }}
+        />
       )}
 
       {/* Conversation History Panel */}
@@ -792,32 +853,107 @@ function App() {
         </div>
 
         <div className="pane coach">
-          <h2>AI Coach {isProcessing && <span className="loading">thinking...</span>}</h2>
-          <div className="coach-content">
-            {coachResponse || "Ask a question to get coaching tips..."}
-          </div>
-        </div>
+           <h2>Meeting Assistant {isProcessing && <span className="loading">thinking...</span>}</h2>
+           <div className="coach-content">
+             {coachResponse ? (
+               <div className="meeting-assistant-response">
+                 {coachResponse.split('\n').map((line, i) => {
+                   // Headers (##)
+                   if (line.startsWith('##')) {
+                     return (
+                       <h3 key={i} style={{ marginTop: '16px', marginBottom: '8px', color: '#1e40af', fontSize: '16px', fontWeight: 'bold' }}>
+                         {line.replace(/^##\s+/, '')}
+                       </h3>
+                     );
+                   }
+                   // Bold text (**)
+                   else if (line.includes('**')) {
+                     const parts = line.split(/(\*\*[^*]+\*\*)/g);
+                     return (
+                       <div key={i} style={{ marginBottom: '6px', lineHeight: '1.5' }}>
+                         {parts.map((part, idx) =>
+                           part.startsWith('**') ? (
+                             <strong key={idx}>{part.replace(/\*\*/g, '')}</strong>
+                           ) : (
+                             <span key={idx}>{part}</span>
+                           )
+                         )}
+                       </div>
+                     );
+                   }
+                   // Bullet points (-)
+                   else if (line.trim().startsWith('-')) {
+                     return (
+                       <div key={i} style={{ marginLeft: '16px', marginBottom: '4px', lineHeight: '1.5' }}>
+                         {line}
+                       </div>
+                     );
+                   }
+                   // Numbered lists
+                   else if (/^\d+\./.test(line.trim())) {
+                     return (
+                       <div key={i} style={{ marginLeft: '16px', marginBottom: '4px', lineHeight: '1.5' }}>
+                         {line}
+                       </div>
+                     );
+                   }
+                   // Empty lines
+                   else if (line.trim() === '') {
+                     return <div key={i} style={{ height: '8px' }} />;
+                   }
+                   // Regular text
+                   else {
+                     return (
+                       <div key={i} style={{ marginBottom: '6px', lineHeight: '1.5' }}>
+                         {line}
+                       </div>
+                     );
+                   }
+                 })}
+               </div>
+             ) : (
+               <div style={{ color: '#666', fontStyle: 'italic' }}>
+                 💬 Ask a question or discuss to get structured meeting assistance...
+               </div>
+             )}
+           </div>
+         </div>
 
         {/* Conversation Summary Panel - moved to right */}
         <div className="pane summary-panel">
-          <h2>📊 Conversation Summary</h2>
+          <h2>📊 Meeting Summary</h2>
           <div className="summary-content">
             {sessionSummaries.length === 0 ? (
               <div className="summary-placeholder">
                 {conversationHistory.length === 0
-                  ? 'Start a conversation to see summaries appear here...'
-                  : 'Summaries will be generated automatically as you converse...'}
+                  ? '💬 Start discussing to generate meeting summary...'
+                  : '⏳ Summary will appear as conversation progresses...'}
               </div>
             ) : (
               <div className="summary-scroll">
                 {sessionSummaries.slice().reverse().map((summary, index) => (
                   <div key={index} className="summary-block">
                     <div className="summary-time">
-                      {summary.timeRange.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
-                      {summary.timeRange.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <strong>
+                        {summary.timeRange.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} —
+                        {summary.timeRange.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </strong>
                     </div>
                     <div className="summary-text">
-                      <pre>{summary.content}</pre>
+                      {/* Render summary as formatted markdown-like content */}
+                      {summary.content.split('\n').map((line, i) => {
+                        if (line.startsWith('##')) {
+                          return <h4 key={i} style={{ marginTop: '12px', marginBottom: '6px', color: '#2563eb' }}>{line.replace(/^##\s/, '')}</h4>;
+                        } else if (line.startsWith('- ')) {
+                          return <div key={i} style={{ marginLeft: '16px', marginBottom: '4px' }}>{line}</div>;
+                        } else if (line.startsWith('**') && line.endsWith('**')) {
+                          return <div key={i} style={{ fontWeight: 'bold', marginBottom: '4px' }}>{line.replace(/\*\*/g, '')}</div>;
+                        } else if (line.trim() === '') {
+                          return <div key={i} style={{ height: '8px' }} />;
+                        } else {
+                          return <div key={i} style={{ marginBottom: '4px', lineHeight: '1.4' }}>{line}</div>;
+                        }
+                      })}
                     </div>
                   </div>
                 ))}

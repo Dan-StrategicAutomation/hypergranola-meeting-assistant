@@ -9,10 +9,12 @@ mod audio;
 mod whisper;
 mod stt;
 mod diarization;
+mod meeting_context;
 
 use stt::{SharedSttState, SttState, SttStatus};
 use whisper::{ModelSize, get_model_dir, get_model_path};
 use diarization::{initialize_diarization_engine, process_audio_diarization, get_example_speakers};
+use meeting_context::{MeetingContext, MeetingContextManager};
 
 async fn perform_search(query: &str) -> Result<String, String> {
     println!("Scraping DuckDuckGo for: {}", query);
@@ -55,26 +57,79 @@ async fn perform_search(query: &str) -> Result<String, String> {
     }
 }
 
-async fn ask_coach(transcript: &str, context: &str) -> Result<String, String> {
+async fn ask_meeting_assistant(transcript: &str, search_context: &str, meeting_context: Option<&MeetingContext>) -> Result<String, String> {
     // Configuration from ENV
     let api_key = env::var("LLM_API_KEY").unwrap_or_default();
     let api_url = env::var("LLM_API_URL").unwrap_or("https://openrouter.ai/api/v1/chat/completions".to_string());
     let model = env::var("LLM_MODEL").unwrap_or("openrouter/google/gemini-2.0-flash-001".to_string());
 
-    println!("Asking Coach via: {} (Model: {})", api_url, model);
+    println!("Asking Meeting Assistant via: {} (Model: {})", api_url, model);
 
     let client = Client::new();
-    let prompt = format!(
-        "You are an expert AI Interview Coach. 
-        Context from Live Search:
-        {}
-        
-        Candidate/Interviewer Transcript:
-        {}
-        
-        Provide a concise, high-level coaching tip or answer.", 
-        context, transcript
-    );
+
+    // Build context-aware prompt
+    let mut prompt_parts = Vec::new();
+
+    // Add domain-specific role
+    if let Some(context) = meeting_context {
+        prompt_parts.push(context.get_ai_prompt_prefix());
+        prompt_parts.push(format!("\n\nMeeting Context:\n{}", context.get_context_summary()));
+    } else {
+        prompt_parts.push("You are an expert AI Meeting Assistant specializing in productive meetings, clear communication, and effective decision-making.".to_string());
+    }
+
+    // Add search context if available
+    if !search_context.is_empty() {
+        prompt_parts.push(format!("Context from Live Search:\n{}", search_context));
+    }
+
+    // Add transcript
+    prompt_parts.push(format!("Current Meeting Transcript:\n{}", transcript));
+
+    // Add meeting assistance instructions
+    prompt_parts.push(r#"
+IMPORTANT: You are a MEETING FACILITATOR, not a chatbot. Provide STRUCTURED, ACTIONABLE HELP only.
+
+Format your response using MARKDOWN with clear sections:
+- Use ## for main sections
+- Use - for bullet points
+- Use **bold** for emphasis
+- Include numbers for prioritized lists
+
+NEVER:
+- Make small talk or casual chat
+- Ask conversational follow-ups like "How does that sound?"
+- Give generic advice
+- Respond with opinion or chat
+
+ALWAYS:
+- Extract concrete ACTION ITEMS with ownership
+- List KEY DECISIONS made
+- Highlight RISKS or CONCERNS
+- Provide WEB SEARCH context when relevant (clearly labeled)
+- Use domain-specific terminology for this meeting type
+- Focus on what NEEDS TO HAPPEN NEXT
+
+Structure your response exactly like this:
+
+## Action Items
+- [Clear action] - Owner: [person], Due: [timeframe]
+
+## Key Decisions
+- Decision and reasoning
+
+## Discussion Summary
+- Main points covered
+
+## Risks/Concerns
+- Potential issues to address
+
+## Search Context (if relevant)
+- [Only if needed based on transcript]
+
+Keep each section CONCISE and ACTIONABLE. No fluff."#.to_string());
+
+    let prompt = prompt_parts.join("\n\n");
 
     let mut request = client
         .post(&api_url)
@@ -113,7 +168,69 @@ async fn ask_coach(transcript: &str, context: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn process_transcript(app_handle: tauri::AppHandle, text: String) -> Result<(), String> {
+fn set_meeting_context(
+    context: MeetingContext,
+    state: tauri::State<'_, Arc<Mutex<MeetingContextManager>>>,
+) -> Result<(), String> {
+    let mut manager = state.lock().map_err(|e| e.to_string())?;
+    manager.set_context(context);
+    Ok(())
+}
+
+#[tauri::command]
+fn get_current_meeting_context(
+    state: tauri::State<'_, Arc<Mutex<MeetingContextManager>>>,
+) -> Result<Option<MeetingContext>, String> {
+    let manager = state.lock().map_err(|e| e.to_string())?;
+    Ok(manager.get_current_context().cloned())
+}
+
+#[tauri::command]
+fn add_meeting_participant(
+    name: String,
+    role: String,
+    email: Option<String>,
+    state: tauri::State<'_, Arc<Mutex<MeetingContextManager>>>,
+) -> Result<(), String> {
+    let mut manager = state.lock().map_err(|e| e.to_string())?;
+    if let Some(context) = manager.get_current_context_mut() {
+        context.add_participant(name, role, email);
+        Ok(())
+    } else {
+        Err("No active meeting context".to_string())
+    }
+}
+
+#[tauri::command]
+fn add_meeting_goal(
+    description: String,
+    priority: u8,
+    state: tauri::State<'_, Arc<Mutex<MeetingContextManager>>>,
+) -> Result<(), String> {
+    let mut manager = state.lock().map_err(|e| e.to_string())?;
+    if let Some(context) = manager.get_current_context_mut() {
+        context.add_goal(description, priority);
+        Ok(())
+    } else {
+        Err("No active meeting context".to_string())
+    }
+}
+
+#[tauri::command]
+fn clear_meeting_context(
+    state: tauri::State<'_, Arc<Mutex<MeetingContextManager>>>,
+) -> Result<(), String> {
+    let mut manager = state.lock().map_err(|e| e.to_string())?;
+    manager.clear_context();
+    Ok(())
+}
+
+#[tauri::command]
+async fn process_transcript(
+    app_handle: tauri::AppHandle,
+    text: String,
+    meeting_state: tauri::State<'_, Arc<Mutex<MeetingContextManager>>>,
+) -> Result<(), String> {
     // Load .env
     dotenv().ok();
     
@@ -131,8 +248,14 @@ async fn process_transcript(app_handle: tauri::AppHandle, text: String) -> Resul
         let search_res = perform_search(&q).await?;
         app_handle.emit("search_results", &search_res).unwrap();
 
-        let coach_res = ask_coach(&text, &search_res).await?;
-        app_handle.emit("coach_response", &coach_res).unwrap();
+        // Get current meeting context for AI assistance
+        let meeting_context = {
+            let manager = meeting_state.lock().map_err(|e| e.to_string())?;
+            manager.get_current_context().cloned()
+        };
+    
+        let assistant_res = ask_meeting_assistant(&text, &search_res, meeting_context.as_ref()).await?;
+        app_handle.emit("meeting_assistant_response", &assistant_res).unwrap();
     }
     Ok(())
 }
@@ -338,6 +461,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(Arc::new(Mutex::new(SttState::default())) as SharedSttState)
+        .manage(Arc::new(Mutex::new(MeetingContextManager::default())))
         .invoke_handler(tauri::generate_handler![
             process_transcript,
             correct_transcript,
@@ -350,6 +474,11 @@ pub fn run() {
             initialize_diarization_engine,
             process_audio_diarization,
             get_example_speakers,
+            set_meeting_context,
+            get_current_meeting_context,
+            add_meeting_participant,
+            add_meeting_goal,
+            clear_meeting_context,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

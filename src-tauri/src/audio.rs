@@ -148,6 +148,7 @@ impl AudioCapture {
     }
 
     /// Check if currently recording
+    #[allow(dead_code)]
     pub fn is_recording(&self) -> bool {
         self.is_recording.load(Ordering::SeqCst)
     }
@@ -165,6 +166,7 @@ impl AudioCapture {
     }
 
     /// Clear the audio buffer
+    #[allow(dead_code)]
     pub fn clear_buffer(&mut self) {
         while self.consumer.try_pop().is_some() {}
     }
