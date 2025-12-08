@@ -12,6 +12,7 @@ mod diarization;
 
 use stt::{SharedSttState, SttState, SttStatus};
 use whisper::{ModelSize, get_model_dir, get_model_path};
+use diarization::{initialize_diarization_engine, process_audio_diarization, get_example_speakers};
 
 async fn perform_search(query: &str) -> Result<String, String> {
     println!("Scraping DuckDuckGo for: {}", query);
@@ -346,10 +347,9 @@ pub fn run() {
             get_stt_status,
             download_model,
             check_model_exists,
-            initialize_diarization,
-            start_diarization,
-            stop_diarization,
-            get_current_speakers,
+            initialize_diarization_engine,
+            process_audio_diarization,
+            get_example_speakers,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

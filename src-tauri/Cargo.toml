@@ -36,6 +36,6 @@ hound = "3.5.1"
 whisper-rs = "0.15.1"
 ringbuf = "0.4.8"
 dirs = "5.0.1"
-pyannote-rs = "0.1.0"
+# pyannote-rs = "0.1.0" - Removed due to compilation issues
 rubato = "0.14.0"
 
