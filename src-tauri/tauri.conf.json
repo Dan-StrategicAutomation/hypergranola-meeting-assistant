@@ -35,9 +35,7 @@
       "nsis": {
         "installerIcon": "icons/icon.ico",
         "installMode": "currentUser",
-        "languages": ["English"],
-        "oneClick": false,
-        "allowToChangeInstallationDirectory": true
+        "languages": ["en-US"]
       }
     }
   }
