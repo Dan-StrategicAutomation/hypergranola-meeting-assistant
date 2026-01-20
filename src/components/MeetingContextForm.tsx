@@ -1,4 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy } from 'react';
+
+// Lazy-loaded UI parts to keep initial bundle small
+const LiveMeetingSummary = lazy(() => import('./LiveMeetingSummary'));
+const MeetingSummaryButton = lazy(() => import('./MeetingSummaryButton'));
 import { isTauri } from '../utils/environment';
 
 interface MeetingParticipant {
@@ -118,6 +122,12 @@ const MeetingContextForm: React.FC<MeetingContextFormProps> = ({ onClose, onSave
   return (
     <div className="meeting-context-form-overlay">
       <div className="meeting-context-form">
+        {/* Live summary panel shows a short, updating summary while editing meeting context */}
+        <div style={{ margin: '0 1rem 1rem 1rem' }}>
+          <React.Suspense fallback={<div>Loading summary…</div>}>
+            <LiveMeetingSummary />
+          </React.Suspense>
+        </div>
         <div className="form-header">
           <h2>Meeting Context Setup</h2>
           <button className="close-btn" onClick={onClose}>×</button>
@@ -250,6 +260,12 @@ const MeetingContextForm: React.FC<MeetingContextFormProps> = ({ onClose, onSave
 
           <div className="form-actions">
             <button type="button" onClick={onClose} className="cancel-btn">Cancel</button>
+            {/* Export summary button added here for quick access */}
+            <div style={{ display: 'inline-block', marginRight: '0.5rem' }}>
+              <React.Suspense fallback={<button className="summary-btn">Export Summary</button>}>
+                <MeetingSummaryButton />
+              </React.Suspense>
+            </div>
             <button type="submit" className="save-btn">Save Meeting Context</button>
           </div>
         </form>

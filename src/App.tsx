@@ -66,8 +66,9 @@ function App() {
   const [editingSpeaker, setEditingSpeaker] = useState<string | null>(null);
   const [speakerNameInput, setSpeakerNameInput] = useState('');
   const [lastRevisionTime, setLastRevisionTime] = useState<Date>(new Date());
-  const [transcript, setTranscript] = useState("");
-  const [searchResults, setSearchResults] = useState<string[]>([]);
+  // We only keep setters for these states; the raw values are not directly read elsewhere
+  const [, setTranscript] = useState("");
+  const [, setSearchResults] = useState<string[]>([]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);

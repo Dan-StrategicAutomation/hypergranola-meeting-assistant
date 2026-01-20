@@ -13,6 +13,7 @@ import {
   SessionSummary,
   CompressedMessage,
   SpeakerDetectionResult,
+  SpeakerStats,
   DEFAULT_CONFIG,
   ConversationSystemConfig
 } from '../models/conversation';
@@ -206,12 +207,16 @@ export class EnhancedConversationStorageManager {
       console.error('Failed to load conversation storage:', error);
     }
 
-    // Return default structure
+    // Return default structure - map internal config to public storage settings shape
     return {
       currentSessionId: null,
       sessions: {},
       version: '2.0',
-      settings: this.config.storage
+      settings: {
+        autoCompressThreshold: this.config.compression.threshold,
+        summaryIntervalMinutes: this.config.summarization.intervalMinutes,
+        maxHistoryLength: undefined
+      }
     };
   }
 
@@ -307,7 +312,6 @@ export class EnhancedConversationStorageManager {
 
     // Keep only the 10 most recent sessions
     if (sessionIds.length > 10) {
-      const sessionsToKeep = sessionIds.slice(0, 10);
       const sessionsToRemove = sessionIds.slice(10);
 
       sessionsToRemove.forEach(id => {

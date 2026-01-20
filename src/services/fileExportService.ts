@@ -6,6 +6,8 @@
  */
 
 import { EnhancedConversationSession } from '../models/conversation';
+import { generateMeetingSummaryText, generateMeetingBullets } from './summarizerService';
+import { conversationStorage } from './conversationStorage';
 
 export class FileExportService {
   private static instance: FileExportService;
@@ -162,7 +164,7 @@ export class FileExportService {
     text += `Conversation Transcript:\n`;
     text += `======================\n\n`;
 
-    session.messages.forEach((msg, index) => {
+    session.messages.forEach((msg) => {
       const speaker = session.speakers.find(s => s.speakerId === msg.speakerId) || { name: 'Unknown' };
       text += `[${msg.timestamp.toLocaleTimeString()}] ${speaker.name}: ${msg.content}\n`;
       if (msg.isQuestion) {
@@ -213,7 +215,7 @@ export class FileExportService {
 
     // Conversation transcript
     md += '## 💬 Conversation Transcript\n\n';
-    session.messages.forEach((msg, index) => {
+    session.messages.forEach((msg) => {
       const speaker = session.speakers.find(s => s.speakerId === msg.speakerId) || { name: 'Unknown' };
       const time = msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       md += `### ${time} - ${speaker.name}\n\n`;
@@ -262,7 +264,7 @@ export class FileExportService {
     if (session.compressedHistory.length > 0) {
       md += '## 🗄️ Compressed History\n\n';
       md += '*(Context-optimized summary of longer exchanges)*\n\n';
-      session.compressedHistory.forEach((comp, index) => {
+      session.compressedHistory.forEach((comp) => {
         const startTime = comp.timeRange.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const endTime = comp.timeRange.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const speaker = session.speakers.find(s => s.speakerId === comp.speakerId) || { name: 'Unknown' };
@@ -287,9 +289,7 @@ export class FileExportService {
    * Export all sessions to a single file
    */
   public exportAllSessions(format: 'json' | 'txt' | 'md' = 'json'): void {
-    const allSessions = Object.values(
-      EnhancedConversationStorageManager.getInstance().getAllSessions()
-    );
+    const allSessions = conversationStorage.getAllSessions();
 
     if (allSessions.length === 0) {
       throw new Error('No sessions available to export');
@@ -340,6 +340,53 @@ export class FileExportService {
         filename += '.md';
         mimeType = 'text/markdown';
         break;
+    }
+
+    this.handleFileDownload(content, filename, mimeType);
+  }
+
+  /**
+   * Export a concise meeting summary (bulleted) for a single session.
+   * Produces a small MD/TXT/JSON file containing the generated bullets.
+   */
+  public exportMeetingSummary(
+    session: EnhancedConversationSession,
+    format: 'json' | 'txt' | 'md' = 'md',
+    maxBullets: number = 6
+  ): void {
+    if (!session) throw new Error('No session provided');
+
+    const bullets = generateMeetingBullets(session, maxBullets);
+    let content = '';
+    let filename = this.generateFilename(session) + '_summary';
+    let mimeType = '';
+
+    switch (format) {
+      case 'md':
+        content = `# Meeting Summary: ${session.title}\n\n` + bullets.map(b => `- ${b}`).join('\n');
+        filename += '.md';
+        mimeType = 'text/markdown';
+        break;
+
+      case 'txt':
+        content = generateMeetingSummaryText(session, maxBullets);
+        filename += '.txt';
+        mimeType = 'text/plain';
+        break;
+
+      case 'json':
+        content = JSON.stringify({
+          sessionId: session.sessionId,
+          title: session.title,
+          generatedAt: new Date().toISOString(),
+          bullets
+        }, null, 2);
+        filename += '.json';
+        mimeType = 'application/json';
+        break;
+
+      default:
+        throw new Error(`Unsupported summary format: ${format}`);
     }
 
     this.handleFileDownload(content, filename, mimeType);

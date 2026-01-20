@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "HyperGranola",
   "version": "0.1.0",
-  "identifier": "com.haylerd.tauri-app",
+  "identifier": "com.hypergranola.meeting-assistant",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "tauri-app",
-        "width": 800,
-        "height": 600
+        "title": "HyperGranola - AI Meeting Assistant",
+        "width": 1000,
+        "height": 800
       }
     ],
     "security": {
@@ -30,6 +30,15 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "oneClick": false,
+        "allowToChangeInstallationDirectory": true
+      }
+    }
   }
 }
